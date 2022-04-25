@@ -7,6 +7,8 @@ import (
 	"os"
 	"strconv"
 
+	"github.com/Masterminds/semver/v3"
+	"github.com/fatih/color"
 	"github.com/psampaz/go-mod-outdated/internal/mod"
 
 	"github.com/olekukonko/tablewriter"
@@ -25,6 +27,8 @@ const (
 	StyleMarkdown OutputStyle = "markdown"
 	// StyleJSON represents the JSON formatted output style
 	StyleJSON OutputStyle = "json"
+	// StylePretty represents the pretty list formatted output style
+	StylePretty OutputStyle = "pretty"
 )
 
 // Run converts the the json output of go list -u -m -json all to table format
@@ -69,9 +73,12 @@ func hasOutdated(filteredModules []mod.Module) bool {
 }
 
 func renderOutput(writer io.Writer, modules []mod.Module, style OutputStyle) {
-	if style == StyleJSON {
+	switch style {
+	case StyleJSON:
 		renderJSON(writer, modules)
-	} else {
+	case StylePretty:
+		renderPretty(writer, modules)
+	default:
 		renderTable(writer, modules, style)
 	}
 }
@@ -104,4 +111,75 @@ func renderJSON(writer io.Writer, modules []mod.Module) {
 	encoder.SetIndent("", "  ")
 
 	encoder.Encode(modules)
+}
+
+func renderPretty(writer io.Writer, modules []mod.Module) {
+	table := tablewriter.NewWriter(writer)
+	table.SetBorder(false)
+	table.SetColumnSeparator("")
+	table.SetAutoWrapText(false)
+	table.SetNoWhiteSpace(true)
+
+	for _, mod := range modules {
+		var (
+			c          color.Attribute
+			newVersion string
+		)
+
+		if mod.CurrentVersion() == mod.NewVersion() || mod.NewVersion() == "" {
+			c = color.FgGreen
+		} else {
+			curParsed := semver.MustParse(mod.CurrentVersion())
+			newParsed := semver.MustParse(mod.NewVersion())
+
+			if curParsed.Major() == newParsed.Major() {
+				c = color.FgYellow
+			} else {
+				c = color.FgRed
+			}
+
+			newVersion = renderVersionDiff(curParsed, newParsed)
+		}
+
+		row := []string{
+			color.New(c).Sprintf("%s ", mod.Path),
+			color.New(color.FgBlue).Sprintf("%s ", mod.CurrentVersion()),
+			newVersion,
+		}
+
+		table.Append(row)
+	}
+
+	table.Render()
+}
+
+func renderVersionDiff(cur *semver.Version, next *semver.Version) string {
+	output := "-> "
+	c := color.FgWhite
+
+	if cur.Major() != next.Major() {
+		c = color.FgYellow
+	}
+	output += color.New(c).Sprintf("%d.", next.Major())
+
+	if cur.Minor() != next.Minor() {
+		c = color.FgYellow
+	}
+	output += color.New(c).Sprintf("%d.", next.Minor())
+
+	if cur.Patch() != next.Patch() {
+		c = color.FgYellow
+	}
+	output += color.New(c).Sprintf("%d", next.Patch())
+
+	if next.Prerelease() != "" {
+		output += color.New(c).Sprint("-")
+
+		if cur.Prerelease() != next.Prerelease() {
+			c = color.FgYellow
+		}
+		output += color.New(c).Sprint(next.Prerelease())
+	}
+
+	return output
 }
