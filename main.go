@@ -29,6 +29,8 @@ func normalizeStyle(style string) runner.OutputStyle {
 		return runner.StyleMarkdown
 	case "json":
 		return runner.StyleJSON
+	case "pretty":
+		return runner.StylePretty
 	default:
 		return runner.StyleDefault
 	}
