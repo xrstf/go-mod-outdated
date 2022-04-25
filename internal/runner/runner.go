@@ -143,7 +143,7 @@ func renderPretty(writer io.Writer, modules []mod.Module) {
 
 		row := []string{
 			color.New(c).Sprintf("%s ", mod.Path),
-			color.New(color.FgBlue).Sprintf("%s ", mod.CurrentVersion()),
+			color.New(color.FgHiBlue).Sprintf("%s ", mod.CurrentVersion()),
 			newVersion,
 		}
 
