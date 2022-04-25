@@ -126,10 +126,12 @@ func renderPretty(writer io.Writer, modules []mod.Module) {
 			newVersion string
 		)
 
+		curParsed := semver.MustParse(mod.CurrentVersion())
+		curVersion := curParsed.String()
+
 		if mod.CurrentVersion() == mod.NewVersion() || mod.NewVersion() == "" {
 			c = color.FgGreen
 		} else {
-			curParsed := semver.MustParse(mod.CurrentVersion())
 			newParsed := semver.MustParse(mod.NewVersion())
 
 			if curParsed.Major() == newParsed.Major() {
@@ -143,7 +145,7 @@ func renderPretty(writer io.Writer, modules []mod.Module) {
 
 		row := []string{
 			color.New(c).Sprintf("%s ", mod.Path),
-			color.New(color.FgHiBlue).Sprintf("%s ", mod.CurrentVersion()),
+			color.New(color.FgHiBlue).Sprintf("%s ", curVersion),
 			newVersion,
 		}
 
